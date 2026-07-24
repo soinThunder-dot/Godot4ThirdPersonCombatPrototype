@@ -1,6 +1,7 @@
 ## The repeater will execute its child until it returns `SUCCESS` a certain amount of times.
 ## When the number of maximum ticks is reached, it will return a `SUCCESS` status code.
 ## If the child returns `FAILURE`, the repeater will return `FAILURE` immediately.
+## 重複裝飾器：子節點回傳 SUCCESS 達到指定次數後回傳 SUCCESS；若子節點回傳 FAILURE 則立即回傳 FAILURE
 @tool
 @icon("../../icons/repeater.svg")
 class_name RepeaterDecorator extends Decorator
@@ -15,9 +16,11 @@ func before_run(actor: Node, blackboard: Blackboard):
 
 func tick(actor: Node, blackboard: Blackboard) -> int:
 	var child = get_child(0)
+
+    # 若尚未達到重複次數，則執行子節點
 	
 	if current_count < repetitions:
-		if running_child == null:
+		if running_child == null: # 若目前没有執行中的子節點，先執行 before_run
 			child.before_run(actor, blackboard)
 
 		var response = child.tick(actor, blackboard)
@@ -41,9 +44,11 @@ func tick(actor: Node, blackboard: Blackboard) -> int:
 		if running_child != null:
 			running_child = null
 		
-		if response == FAILURE:
+		    # 若子節點失敗，則直接回傳 FAILURE
+    if response == FAILURE:
 			return FAILURE
 		
+    # 若已達重複次數上限，則回傳 SUCCESS
 		if current_count >= repetitions:
 			return SUCCESS
 		
