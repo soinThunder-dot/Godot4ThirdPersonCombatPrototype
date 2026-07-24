@@ -1,20 +1,21 @@
+## 暈眩受害者動畫控制器：管理角色被擊暈後的下跪、起立等狀態與動畫混合，並區分來自閃避或受傷的不同暈眩情境
 class_name DizzyVictimAnimations
 extends BaseAnimations
 
 
-@export var hit_and_death_animations: HitAndDeathAnimations
+@export var hit_and_death_animations: HitAndDeathAnimations  # 命中及死亡動畫組件參考
 
-# flag that dictates whether to play the dizzy anim
+# flag that dictates whether to play the dizzy anim（中文：標記是否要播放暈眩動畫）
 var _blend_dizzy: bool = false
 
-# true if dizzy resulting from a parry, false if
+# true if dizzy resulting from a parry, false if（中文：若為 true 代表此次暈眩來自閃避成功，若為 false 則代表暈眩來自受到傷害）
 # dizzy is a result of taking damage
 var _dizzy_from_parry: bool = true
 
 # dictates whether to ignore the receive kneel
 # call. this is used if we want to use the anim
 # for some other purpose but the function call
-# would interfere with the desired behaviour
+# would interfere with the desired behaviour（中文：標記是否要忽略 receive_kneel 呼叫，當需將此動畫用於其他目的而不想被該函式干擾時使用）
 var _ignore_receive_kneel: bool = false
 
 # this is a flag that will dictate if _blend_dizzy
@@ -23,14 +24,14 @@ var _ignore_receive_kneel: bool = false
 # this if for example they are standing back up
 # and is damaged back to dizzy again. if this flag
 # isn't here, the standing animation would finish
-# and the dizzy animation will not be played.
+# and the dizzy animation will not be played.（中文：此旗標決定當下跪起立動畫播完時，_blend_dizzy 能否重設為 false。若角色在起立過程中又再次受傷進入暈眩，需要這個旗標避免起立動畫完成後意外中斷新的暈眩動畫）
 var _ignore_finish_standing_up: bool = false
 
 var _blend: float = 0.0
 
 
 func _physics_process(_delta):
-	# this is if the character has become a dizzy victim
+	# this is if the character has become a dizzy victim（中文：判斷角色是否已變成暈眩受害者）
 	if BaseAnimations.should_return_blend(_blend_dizzy, _blend): return
 	
 	var blend = anim_tree.get(&"parameters/Dizzy/blend_amount")
@@ -50,7 +51,7 @@ func _physics_process(_delta):
 
 # Call this function to play the dizzy animation
 # if caused by a parry. Should be the standing up
-# dizzy animation.
+# dizzy animation.（中文：呼叫此函式以播放來自閃避成功的暈眩動畫，之後應播放起立動畫）
 func dizzy_from_parry() -> void:
 	_dizzy_from_parry = true
 	anim_tree.set(&"parameters/Dizzy Which One/transition_request", &"from_parry")
@@ -58,7 +59,7 @@ func dizzy_from_parry() -> void:
 
 
 # Call this function to play the dizzy animation
-# if caused by damage. Should come to a kneel.
+# if caused by damage. Should come to a kneel.（中文：呼叫此函式以播放來自受傷的暈眩動畫，之後應進入下跪狀態）
 func dizzy_from_damage() -> void:
 	_dizzy_from_parry = false
 	_ignore_finish_standing_up = true
@@ -72,7 +73,7 @@ func dizzy_from_damage() -> void:
 
 # Call this to come out of dizzy.
 # From parry will just blend out.
-# From damage needs to stand back up again.
+# From damage needs to stand back up again.（中文：呼叫此函式以解除暈眩；若來自閃避只需直接混回；若來自受傷則需重新起立）
 func disable_blend_dizzy() -> void:
 	if _dizzy_from_parry:
 		_blend_dizzy = false
@@ -84,7 +85,7 @@ func disable_blend_dizzy() -> void:
 # Just a keyframe call from the animation track
 # to signfiy that the stand to kneel animation has
 # reached the point where they are kneeling so you
-# can transition to the kneel idle loop.
+# can transition to the kneel idle loop.（中文：這只是來自動畫軌道的關鍵幀呼叫，用於標示從站立到下跪的動畫已到達下跪待機點，可以切換到下跪循環動畫）
 func receive_now_kneeling() -> void:
 	if _ignore_receive_kneel: return
 	_ignore_finish_standing_up = false
@@ -96,7 +97,7 @@ func receive_now_kneeling() -> void:
 
 # Animation track keyframe call to signify that
 # it is now standing after playing the sit to
-# stand animatino.
+# stand animatino.（中文：來自動畫軌道的關鍵幀呼叫，用於標示當前已完成坐下到站起的動畫）
 func receive_finished_standing_up() -> void:
 	if _ignore_finish_standing_up:
 		return
@@ -106,7 +107,7 @@ func receive_finished_standing_up() -> void:
 
 # Called when the the kneeling idle is already playing
 # and the entity got hit which should play the animation
-# where they die from this kneeling position.
+# where they die from this kneeling position.（中文：當下跪循環動畫已在播放且實體遭受致命打擊時呼叫，播放從這個下跪姿勢死亡的動畫）
 func play_death_kneeling() -> void:
 	_ignore_receive_kneel = true
 	
@@ -119,7 +120,7 @@ func play_death_kneeling() -> void:
 	# even though we trim the animation to start
 	# where the receive kneel function is called,
 	# it still calls the function for some reason.
-	# so we ignore it for a short moment.
+	# so we ignore it for a short moment.（中文：在轉換中重用 to_kneel 動畫（因其包含死亡動畫），即使已剪接至呼叫 receive_kneel 的點，它仍然會呼叫該函式，因此我們短暫忽略它）
 	var timer: SceneTreeTimer = get_tree().create_timer(0.5)
 	timer.timeout.connect(
 		func():
