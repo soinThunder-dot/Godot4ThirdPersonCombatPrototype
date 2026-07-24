@@ -3,15 +3,19 @@
 class_name BeehaveTree extends Node
 
 ## Controls the flow of execution of the entire behavior tree.
+## 控制整個行為樹的執行流程。
 
 enum { SUCCESS, FAILURE, RUNNING }
 
 enum ProcessThread { IDLE, PHYSICS }
+# 處理線程類型：IDLE 為每幀更新，PHYSICS 為物理更新
+# 行為樹節點執行後可能返回的三種狀態（成功、失敗、執行中）
 
 signal tree_enabled
 signal tree_disabled
 
 ## Whether this behavior tree should be enabled or not.
+## 此行為樹是否啟用。
 @export var enabled: bool = true:
 	set(value):
 		enabled = value
@@ -28,9 +32,11 @@ signal tree_disabled
 
 ## How often the tree should tick, in frames. The default value of 1 means
 ## tick() runs every frame.
+## 行為樹多久 tick 一次（以幀數計算），默認 1 表示每幀都執行 tick()
 @export var tick_rate: int = 1
 
 ## An optional node path this behavior tree should apply to.
+## 行為樹適用的目標節點路徑（選填）。
 @export_node_path var actor_node_path: NodePath:
 	set(anp):
 		actor_node_path = anp
@@ -42,6 +48,7 @@ signal tree_disabled
 			update_configuration_warnings()
 
 ## Whether to run this tree in a physics or idle thread.
+## 此行為樹要在物理或閒置線程中執行。
 @export var process_thread: ProcessThread = ProcessThread.PHYSICS:
 	set(value):
 		process_thread = value
@@ -50,6 +57,7 @@ signal tree_disabled
 
 ## Custom blackboard node. An internal blackboard will be used
 ## if no blackboard is provided explicitly.
+## 自訂黑板節點。若未明確提供黑板，將使用內部黑板。
 @export var blackboard: Blackboard:
 	set(b):
 		blackboard = b
