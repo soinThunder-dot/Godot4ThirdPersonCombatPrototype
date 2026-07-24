@@ -78,6 +78,7 @@ signal tree_disabled
 
 ## When enabled, this tree is tracked individually
 ## as a custom monitor.
+## 啟用後，此行為樹將被單獨追蹤作為自訂監控項目。
 @export var custom_monitor = false:
 	set(b):
 		custom_monitor = b
@@ -105,12 +106,14 @@ signal tree_disabled
 var status: int = -1
 var last_tick: int = 0
 
+# 內部黑板節點（未提供外部黑板時自動建立）
 var _internal_blackboard: Blackboard
 var _process_time_metric_name: String
 var _process_time_metric_value: float = 0.0
 var _can_send_message: bool = false
 
 
+## 節點就緒時初始化：連接場景樹節點新增/移除信號，並設定預設處理線程、演员與黑板
 func _ready() -> void:
 	if not get_tree().is_connected("node_added", _on_scene_tree_node_added_removed.bind(true)):
 		get_tree().node_added.connect(_on_scene_tree_node_added_removed.bind(true))
@@ -154,6 +157,7 @@ func _ready() -> void:
 	last_tick = randi_range(0, tick_rate - 1)
 
 
+## 當場景樹中新增或移除節點時呼叫，用於重新檢查子節點結構並更新行為樹狀態
 func _on_scene_tree_node_added_removed(node: Node, is_added: bool) -> void:
 	if Engine.is_editor_hint():
 		return
@@ -173,15 +177,18 @@ func _on_scene_tree_node_added_removed(node: Node, is_added: bool) -> void:
 			)
 
 
+## 物理幀更新回調，交由內部處理函式執行
 func _physics_process(_delta: float) -> void:
 	_process_internally()
 
 
 func _process(_delta: float) -> void:
+## 閒置幀更新回調，交由內部處理函式執行
 	_process_internally()
 
 
 func _process_internally() -> void:
+## 實際執行行為樹 tick 邏輯的核心函式，包含隔幀控制、性能量測與除錯器訊息回報
 	if Engine.is_editor_hint():
 		return
 
@@ -209,6 +216,7 @@ func _process_internally() -> void:
 	_process_time_metric_value = Time.get_ticks_usec() - start_time
 
 
+## 執行行為樹的單次 tick，呼叫根節點的 tick 並回傳執行結果狀態
 func tick() -> int:
 	if actor == null or get_child_count() == 0:
 		return FAILURE
@@ -230,6 +238,7 @@ func tick() -> int:
 
 
 func _get_configuration_warnings() -> PackedStringArray:
+## 檢查行為樹本身的設定是否正確，並在編輯器中顯示相應警告（例如未設定演員、無子節點等）
 	var warnings: PackedStringArray = []
 
 	if actor == null:
@@ -245,16 +254,19 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 ## Returns the currently running action
+## 回傳目前正在執行中的動作節點
 func get_running_action() -> ActionLeaf:
 	return blackboard.get_value("running_action", null, str(actor.get_instance_id()))
 
 
 ## Returns the last condition that was executed
+## 回傳最後一次執行的條件節點
 func get_last_condition() -> ConditionLeaf:
 	return blackboard.get_value("last_condition", null, str(actor.get_instance_id()))
 
 
 ## Returns the status of the last executed condition
+## 回傳最後一次執行條件節點的狀態結果
 func get_last_condition_status() -> String:
 	if blackboard.has_value("last_condition_status", str(actor.get_instance_id())):
 		var status = blackboard.get_value(
@@ -270,6 +282,7 @@ func get_last_condition_status() -> String:
 
 
 ## interrupts this tree if anything was running
+## 如果目前有執行中的節點，則中斷整個行為樹
 func interrupt() -> void:
 	if self.get_child_count() != 0:
 		var first_child = self.get_child(0)
@@ -278,15 +291,18 @@ func interrupt() -> void:
 
 
 ## Enables this tree.
+## 啟用此行為樹
 func enable() -> void:
 	self.enabled = true
 
 
 ## Disables this tree.
+## 停用此行為樹
 func disable() -> void:
 	self.enabled = false
 
 
+## 節點離開場景樹時清理：移除自訂監控器登記、取消除錯器追蹤
 func _exit_tree() -> void:
 	if custom_monitor:
 		if _process_time_metric_name != "":
@@ -298,10 +314,12 @@ func _exit_tree() -> void:
 
 
 # Called by the engine to profile this tree
+# 由引擎呼叫以分析此行為樹的性能
 func _get_process_time_metric_value() -> int:
 	return int(_process_time_metric_value)
 
 
+# 遞迴建立節點及其子節點的除錯訊息資料（供外部除錯工具使用）
 func _get_debugger_data(node: Node) -> Dictionary:
 	if not (node is BeehaveTree or node is BeehaveNode):
 		return {}
@@ -321,16 +339,20 @@ func _get_debugger_data(node: Node) -> Dictionary:
 	return data
 
 
+# 回傳此節點所屬的自訂類別名稱陣列（供除錯與型別識別使用）
 func get_class_name() -> Array[StringName]:
 	return [&"BeehaveTree"]
 
 
+# 避免在初始載入時因 autoload 載入順序問題而發生生命周期錯誤
+# 取得全局性能監控器（BeehaveGlobalMetrics）節點參考
 # required to avoid lifecycle issues on initial load
 # due to loading order problems with autoloads
 func _get_global_metrics() -> Node:
 	return get_tree().root.get_node("BeehaveGlobalMetrics")
 
 
+# 取得全局除錯器（BeehaveGlobalDebugger）節點參考
 # required to avoid lifecycle issues on initial load
 # due to loading order problems with autoloads
 func _get_global_debugger() -> Node:
