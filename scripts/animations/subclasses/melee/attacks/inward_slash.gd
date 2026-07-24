@@ -5,7 +5,7 @@ extends MeleeAttack
 ## 交替播放，以確保每次攻擊都能從頭觸發動畫轉接。
 
 # 動畫修剔(trim)進度，控制動畫播放的起始位置比例
-@xport var trim: float = 0.3
+@export var trim: float = 0.3
 @export var speed: float = 1.5
 
 
@@ -18,7 +18,7 @@ func _ready():
 ## 依據 _play_copy 旗標交替使用原版或複製版的 AnimationTree 節點，避免相同動畫連續播放時無法重新觸發轉接
 func play_attack():
 	if _play_copy:
-							# 播放複製版節點：先將攻擊與行走混合量歸零(完全以攻擊動畫為主)
+										# 播放複製版節點：先將攻擊與行走混合量歸零(完全以攻擊動畫為主)
 		anim_tree.set(&"parameters/Attack Inward Slash Copy/Inward Slash and Walk Blend/blend_amount", 0.0)
 		# 設定動畫播放起始進度(trim)，可跳過前段直接從中途開始播放
 		anim_tree.set(&"parameters/Attack Inward Slash Copy/Inward Slash Trim/seek_request", trim)
