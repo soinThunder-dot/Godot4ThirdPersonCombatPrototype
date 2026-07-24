@@ -1,11 +1,14 @@
 class_name MovementAnimations
 extends BaseAnimations
 
+## 移動動畫子類別，負責處理移動速度、方向與腳步聲控制 (Movement animations subclass)
+
 
 @export var enabled: bool = true
 @export var movement_animations: Array[String]
 @export var audio_footsteps: AudioFootsteps
 
+# speed 屬性：設定移動動畫播放速度，並同步更新所有相關動畫的 Speed/scale 參數
 var speed: float = 1.0:
 	set(value):
 		if speed == value: return
@@ -16,8 +19,10 @@ var speed: float = 1.0:
 				speed
 			)
 
+# dir：目前角色移動方向向量（三維）
 var dir: Vector3 = Vector3.ZERO
 
+# _input_dir：輸入方向（二維），設定時會依閘值判斷是否播放腳步聲
 var _input_dir: Vector2 = Vector2.ZERO:
 	set(value):
 		if value == _input_dir: return
@@ -28,14 +33,17 @@ var _input_dir: Vector2 = Vector2.ZERO:
 			audio_footsteps.can_play = false
 		_input_dir = value
 
+# _blend：目前移動混合比例（用於判斷是否需要更新方向參數）
 var _blend: float = 0.0
 
 
+## _ready：初始化時若有移動動畫列表，則預設使用第一個動畫狀態
 func _ready():
 	if movement_animations:
 		set_state(movement_animations[0].to_lower())
 
 
+## _physics_process：每幀更新移動混合比例與方向參數，驅動動畫樹圖中的移動相關參數
 func _physics_process(_delta: float) -> void:
 	if not enabled: return
 	
@@ -70,5 +78,6 @@ func _physics_process(_delta: float) -> void:
 		)
 
 
+## set_state：切換移動方法狀態（例如行走、跑步等），發送轉換請求至動畫樹圖
 func set_state(anim_name: String) -> void:
 	anim_tree.set(&"parameters/Movement Method/transition_request", anim_name)
