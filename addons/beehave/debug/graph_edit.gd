@@ -3,27 +3,32 @@ extends GraphEdit
 
 const BeehaveGraphNode := preload("graph_node.gd")
 
+# 水平與垂直排列圖示，供切換按鈕使用
 const HORIZONTAL_LAYOUT_ICON := preload("icons/horizontal_layout.svg")
 const VERTICAL_LAYOUT_ICON := preload("icons/vertical_layout.svg")
 
+# 動畫進度球沿連線移動的間距（像素單位）
 const PROGRESS_SHIFT: int = 50
+# 節點未啟動時的灰色
 const INACTIVE_COLOR: Color = Color("#898989")
+# 節點正在執行中的黃色
 const ACTIVE_COLOR: Color = Color("#c29c06")
+# 節點執行成功的綠色
 const SUCCESS_COLOR: Color = Color("#07783a")
-
 
 var updating_graph: bool = false
 var arraging_nodes: bool = false
 var beehave_tree: Dictionary:
 	set(value):
+		# 若傳入的值與目前相同則不重建
 		if beehave_tree == value:
 			return
 		beehave_tree = value
 		active_nodes.clear()
 		_update_graph()
-
 var horizontal_layout: bool = false:
 	set(value):
+		# 圖形正在更新或排列節點時，忽略切換請求
 		if updating_graph or arraging_nodes:
 			return
 		if horizontal_layout == value:
@@ -31,7 +36,6 @@ var horizontal_layout: bool = false:
 		horizontal_layout = value
 		_update_layout_button()
 		_update_graph()
-
 
 var frames:RefCounted
 var active_nodes: Array[String]
@@ -54,6 +58,7 @@ func _ready() -> void:
 	layout_button = Button.new()
 	layout_button.flat = true
 	layout_button.focus_mode = Control.FOCUS_NONE
+	# 按鈕被按下時切換水平/垂直排列
 	layout_button.pressed.connect(func(): horizontal_layout = not horizontal_layout)
 	get_menu_container().add_child(layout_button)
 	_update_layout_button()
@@ -62,20 +67,16 @@ func _ready() -> void:
 func _update_graph() -> void:
 	if updating_graph:
 		return
-
 	updating_graph = true
-
+	# 清空所有已有連線與節點
 	clear_connections()
-
 	for child in _get_child_nodes():
 		remove_child(child)
 		child.queue_free()
-
 	if not beehave_tree.is_empty():
 		_add_nodes(beehave_tree)
 		_connect_nodes(beehave_tree)
 		_arrange_nodes.call_deferred(beehave_tree)
-
 	updating_graph = false
 
 
@@ -87,19 +88,19 @@ func _add_nodes(node: Dictionary) -> void:
 	gnode.title_text = node.name
 	gnode.name = node.id
 	gnode.icon = _get_icon(node.type.back())
-
+	# 根據節點類型決定上下連接埠的可見性
 	if node.type.has(&"BeehaveTree"):
 		gnode.set_slots(false, true)
 	elif node.type.has(&"Leaf"):
 		gnode.set_slots(true, false)
 	elif node.type.has(&"Composite") or node.type.has(&"Decorator"):
 		gnode.set_slots(true, true)
-
 	for child in node.get("children", []):
 		_add_nodes(child)
 
 
 func _connect_nodes(node: Dictionary) -> void:
+	# 遞迴建立父子節點之間的連線
 	for child in node.get("children", []):
 		connect_node(node.id, 0, child.id, 0)
 		_connect_nodes(child)
@@ -108,13 +109,11 @@ func _connect_nodes(node: Dictionary) -> void:
 func _arrange_nodes(node: Dictionary) -> void:
 	if arraging_nodes:
 		return
-
 	arraging_nodes = true
-
+	# 建立排版樹並計算位置後，將位置套用至圖形節點
 	var tree_node := _create_tree_nodes(node)
 	tree_node.update_positions(horizontal_layout)
 	_place_nodes(tree_node)
-
 	arraging_nodes = false
 
 
@@ -127,12 +126,14 @@ func _create_tree_nodes(node: Dictionary, root: TreeNode = null) -> TreeNode:
 
 
 func _place_nodes(node: TreeNode) -> void:
+	# 將計算好的 x/y 座標套用至對應的圖形節點
 	node.item.position_offset = Vector2(node.x, node.y)
 	for child in node.children:
 		_place_nodes(child)
 
 
 func _get_icon(type: StringName) -> Texture2D:
+	# 從全域類別清單中尋找對應類別的圖示
 	var classes := ProjectSettings.get_global_class_list()
 	for c in classes:
 		if c["class"] == type:
@@ -146,7 +147,6 @@ func get_menu_container() -> Control:
 	# Godot 4.0+
 	if has_method("get_zoom_hbox"):
 		return call("get_zoom_hbox")
-
 	# Godot 4.2+
 	return call("get_menu_hbox")
 
@@ -160,9 +160,9 @@ func get_status(status: int) -> String:
 
 
 func process_begin(instance_id: int) -> void:
+	# 每次行為樹開始執行前，重置所有節點的狀態標記
 	if not _is_same_tree(instance_id):
 		return
-
 	for child in _get_child_nodes():
 		child.set_meta("status", -1)
 
@@ -173,6 +173,7 @@ func process_tick(instance_id: int, status: int) -> void:
 		node.text = "Status: %s" % get_status(status)
 		node.set_status(status)
 		node.set_meta("status", status)
+		# 若節點為成功或執行中，將其加入活躍節點清單
 		if status == 0 or status == 2:
 			if not active_nodes.has(node.name):
 				active_nodes.push_back(node.name)
@@ -181,7 +182,7 @@ func process_tick(instance_id: int, status: int) -> void:
 func process_end(instance_id: int) -> void:
 	if not _is_same_tree(instance_id):
 		return
-
+	# 根據每個節點的最終狀態更新顏色與活躍清單
 	for child in _get_child_nodes():
 		var status := child.get_meta("status", -1)
 		match status:
@@ -200,6 +201,7 @@ func process_end(instance_id: int) -> void:
 
 
 func _is_same_tree(instance_id: int) -> bool:
+	# 確認收到的訊息是否來自當前顯示的行為樹
 	return str(instance_id) == beehave_tree.get("id", "")
 
 
@@ -208,6 +210,7 @@ func _get_child_nodes() -> Array[Node]:
 
 
 func _get_connection_line(from_position: Vector2, to_position: Vector2) -> PackedVector2Array:
+	# 將連接線的起終點修正為節點的自訂連接埠位置
 	for child in _get_child_nodes():
 		for port in child.get_input_port_count():
 			if not (child.position_offset + child.get_input_port_position(port)).is_equal_approx(to_position):
@@ -221,10 +224,9 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 
 
 func _get_elbow_connection_line(from_position: Vector2, to_position: Vector2) -> PackedVector2Array:
+	# 產生折角連線（L 形），依排列方向選擇水平或垂直折點
 	var points: PackedVector2Array
-	
 	points.push_back(from_position)
-
 	var mid_position := ((to_position + from_position) / 2).round()
 	if horizontal_layout:
 		points.push_back(Vector2(mid_position.x, from_position.y))
@@ -232,13 +234,12 @@ func _get_elbow_connection_line(from_position: Vector2, to_position: Vector2) ->
 	else:
 		points.push_back(Vector2(from_position.x, mid_position.y))
 		points.push_back(Vector2(to_position.x, mid_position.y))
-
 	points.push_back(to_position)
-	
 	return points
 
 
 func _process(delta: float) -> void:
+	# 當有活躍節點時，推進動畫進度並要求重繪
 	if not active_nodes.is_empty():
 		progress += 10 if delta >= 0.05 else 1
 		if progress >= 1000:
@@ -249,15 +250,12 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if active_nodes.is_empty():
 		return
-
 	var circle_size: float = max(3, 6 * zoom)
 	var progress_shift: float = PROGRESS_SHIFT * zoom
-
 	var connections := get_connection_list()
 	for c in connections:
 		var from_node: StringName
 		var to_node: StringName
-
 		# Godot 4.0+
 		if c.has("from"):
 			from_node = c.from
@@ -266,19 +264,14 @@ func _draw() -> void:
 		else:
 			from_node = c.from_node
 			to_node = c.to_node
-
 		if not from_node in active_nodes or not c.to_node in active_nodes:
 			continue
-
 		var from := get_node(String(from_node))
 		var to := get_node(String(to_node))
-
 		if from.get_meta("status", -1) < 0 or to.get_meta("status", -1) < 0:
 			return
-
 		var output_port_position: Vector2
 		var input_port_position: Vector2
-
 		## Godot 4.0+
 		#if from.has_method("get_connection_output_position"):
 			#output_port_position = from.position + from.call("get_connection_output_position", c.from_port)
@@ -287,29 +280,25 @@ func _draw() -> void:
 		#else:
 			#output_port_position = from.position + from.call("get_output_port_position", c.from_port)
 			#input_port_position = to.position + to.call("get_input_port_position", c.to_port)
-
 		var scale_factor: float = from.get_rect().size.x / from.size.x
-		
 		#var line := _get_connection_line(output_port_position, input_port_position)
+		# 使用自訂折角連線，並依縮放比例修正起終點
 		var line := _get_elbow_connection_line(
 			from.position + from.get_custom_output_port_position(horizontal_layout) * scale_factor,
 			to.position + to.get_custom_input_port_position(horizontal_layout) * scale_factor
 		)
-		
 		var curve = Curve2D.new()
 		for l in line:
 			curve.add_point(l)
-
 		var max_steps := int(curve.get_baked_length())
 		var current_shift := progress % max_steps
 		var p := curve.sample_baked(current_shift)
 		draw_circle(p, circle_size, ACTIVE_COLOR)
-
+		# 在進度球前後繪製等間距的追蹤球
 		var shift := current_shift - progress_shift
 		while shift >= 0:
 			draw_circle(curve.sample_baked(shift), circle_size, ACTIVE_COLOR)
 			shift -= progress_shift
-
 		shift = current_shift + progress_shift
 		while shift <= curve.get_baked_length():
 			draw_circle(curve.sample_baked(shift), circle_size, ACTIVE_COLOR)
@@ -317,5 +306,6 @@ func _draw() -> void:
 
 
 func _update_layout_button() -> void:
+	# 根據當前排列方向更新按鈕圖示與提示文字
 	layout_button.icon = VERTICAL_LAYOUT_ICON if horizontal_layout else HORIZONTAL_LAYOUT_ICON
 	layout_button.tooltip_text = "Switch to Vertical layout" if horizontal_layout else "Switch to Horizontal layout"
