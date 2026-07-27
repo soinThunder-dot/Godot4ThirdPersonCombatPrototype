@@ -5,6 +5,9 @@ class_name TimeLimiterDecorator extends Decorator
 ## The Time Limit Decorator will give its `RUNNING` child a set amount of time to finish
 ## before interrupting it and return a `FAILURE` status code. 
 ## The timer resets the next time that a child is not `RUNNING`
+## 時間限制裝飾器會給予其「RUNNING」子節點一段時間來完成任務，
+## 逾時後將中斷該子節點並回傳「FAILURE」狀態碼。
+## 當子節點不再處於「RUNNING」狀態時，計時器會重置。
 
 @export var wait_time: = 0.0
 
@@ -24,11 +27,11 @@ func tick(actor: Node, blackboard: Blackboard) -> int:
 		var response = child.tick(actor, blackboard)
 		if can_send_message(blackboard):
 			BeehaveDebuggerMessages.process_tick(child.get_instance_id(), response)
-		
+
 		if child is ConditionLeaf:
 			blackboard.set_value("last_condition", child, str(actor.get_instance_id()))
 			blackboard.set_value("last_condition_status", response, str(actor.get_instance_id()))
-		
+
 		if response == RUNNING:
 			running_child = child
 			if child is ActionLeaf:
