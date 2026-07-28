@@ -1,48 +1,55 @@
+# ==============================================================
+# 鎖定目標相機狀態 (Locked-On Camera State)
+#
+# 當玩家鎖定敌人時，這個狀態會接手控制相機，
+# 讓相機自動對準鎖定目標，並根據距離計算俭仰角度。
+# 若鎖定目標不見了，則切換回 FreeLookState。
+# ==============================================================
 class_name CameraControllerLockedOnState
 extends CameraControllerStateMachine
 
-
+# 自由觀察狀態的相機節點，失去鎖定目標後要切換到這個狀態
 @export var free_look_state: CameraControllerFreeLookState
 
-
+# 初始化時監聽鎖定系統的鎖定事件，若目標被清除則切回自由觀察
 func _ready():
 	super._ready()
-	
+
 	lock_on_system.lock_on.connect(
 		func(target: LockOnComponent):
 			if target:
 				return
-			
+
 			parent_state.change_state(
 				free_look_state
 			)
 	)
 
-
+# 每幀處理相機：讓相機自動面向並對準鎖定中的目標
 func process_camera() -> void:
 	var _lock_on_target: LockOnComponent = Globals.lock_on_system.target
-	
+
 	if not _lock_on_target:
 		return
-	
+
 	var _looking_direction: Vector3 = camera_controller\
 		.global_position\
 		.direction_to(
 			_lock_on_target.global_position
 		)
 	_looking_direction = -_looking_direction
-	
+
 	var _target_look: float = atan2(
 		_looking_direction.x,
 		_looking_direction.z
 	)
-	
+
 	var desired_rotation_y: float = lerp_angle(
 		camera_controller.rotation.y,
 		_target_look,
 		0.05
 	)
-	
+
 	camera_controller.rotation.y = lerp(
 		camera_controller.rotation.y,
 		desired_rotation_y,
@@ -54,7 +61,7 @@ func process_camera() -> void:
 		.distance_to(
 			_lock_on_target.global_position
 		)
-	
+
 	var project_desired_pos: Vector3 = camera.project_position(
 		Vector2(
 			get_viewport().size.x/2,
@@ -62,12 +69,13 @@ func process_camera() -> void:
 		),
 		dist_to_target
 	)
-	
+
 	var desired_rotation_x: float = camera_controller.rotation.x \
 		+ atan2(
 			_lock_on_target.global_position.y - project_desired_pos.y,
 			dist_to_target
 		)
+
 	desired_rotation_x = rad_to_deg(desired_rotation_x)
 
 	var lock_on_min_angle: float = -4.5 \
@@ -79,7 +87,7 @@ func process_camera() -> void:
 		lock_on_min_angle,
 		lock_on_max_angle
 	)
-	
+
 	camera_controller.rotation_degrees.x = lerp(
 		camera_controller.rotation_degrees.x,
 		desired_rotation_x,
