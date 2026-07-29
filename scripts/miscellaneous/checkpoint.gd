@@ -22,6 +22,7 @@ var _previously_enabled_hint: bool
 @onready var _checkpoint_system: CheckpointSystem = Globals.checkpoint_system
 
 
+# 節點準備完成時執行,設定重生點初始狀態並連接玩家進出偵測區域的訊號
 func _ready() -> void:
 	respawn_point.visible = false
 	
@@ -41,6 +42,7 @@ func _ready() -> void:
 	)
 
 
+# 每畫面幀執行,計算玩家與檢查點的角度,並依條件顯示或隱藏可使用提示
 func _process(_delta: float) -> void:
 	
 	_player_angle = rad_to_deg(
@@ -69,6 +71,7 @@ func _process(_delta: float) -> void:
 		_previously_enabled_hint = false
 
 
+# 播放檢查點恢復特效與音效
 func play_recovery_particles() -> void:
 	_recovery_particles.restart()
 	_recovery_audio.play()
