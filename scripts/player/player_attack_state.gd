@@ -65,7 +65,7 @@ func process_player() -> void:
 		var attack_level = player.melee_component.attack_level
 		# 以目前層級的反值呼叫 attack()，請近戰元件執行下一個攻擊層級。
 		player.melee_component.attack(not attack_level)
-		
+	
 	# 攻擊動作已結束時，回到上層狀態機設定的預設狀態。
 	if not player.melee_component.attacking:
 		parent_state.transition_to_default_state()
