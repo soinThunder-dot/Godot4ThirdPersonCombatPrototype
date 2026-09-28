@@ -66,7 +66,7 @@ func process_player() -> void:
 	# 因此同一次呼叫仍會繼續檢查後續條件。
 	if Input.is_action_pressed("block"):
 		parent_state.change_state(block_state)
-		
+	
 	# 有有效背刺目標時，切換到背刺狀態。
 	if Globals.backstab_system.backstab_victim:
 		parent_state.change_state(backstab_state)
