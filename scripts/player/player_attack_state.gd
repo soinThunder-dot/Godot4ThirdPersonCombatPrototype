@@ -70,13 +70,13 @@ func process_player() -> void:
 	if not player.melee_component.attacking:
 		parent_state.transition_to_default_state()
 		return
-		
+	
 	# 剛按下格擋鍵且近戰元件成功停止目前攻擊時，改進招架狀態。
 	if Input.is_action_just_pressed("block") and \
 	player.melee_component.stop_attacking():
 		parent_state.change_state(parry_state)
 		return
-		
+	
 	# 持續按住格擋鍵且成功停止攻擊時，改進一般格擋狀態。
 	if Input.is_action_pressed("block") and \
 	player.melee_component.stop_attacking():
