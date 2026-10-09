@@ -40,3 +40,7 @@ func _process(delta: float) -> void:
 		stars.get_child(i).position.y = 0.1 * sin(
 			2 * deg_to_rad(r + (i * (360 / float(count))))
 		)
+
+func _set_stars_trail_enabled(_enabled: bool) -> void:	
+	for node in stars.get_children():		
+		node.get_node("Trail").trail_enabled = _enabled
