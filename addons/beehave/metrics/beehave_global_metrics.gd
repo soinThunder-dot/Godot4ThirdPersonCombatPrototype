@@ -55,3 +55,11 @@ func _get_total_trees() -> int:
 func _get_total_enabled_trees() -> int:
 	# 回傳目前啟用中的行為樹數量
 	return _active_tree_count
+
+
+func _on_tree_enabled() -> void:
+	_active_tree_count += 1
+
+
+func _on_tree_disabled() -> void:
+	_active_tree_count -= 1
